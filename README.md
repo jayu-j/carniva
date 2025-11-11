@@ -1,512 +1,402 @@
-File Handling*/
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+/********************************************************************************/
+/*This program demonstrates the interfacing of LCD to PIC18F4550 microcontroller*/
+/********************************************************************************/
 
-class File1{
-	public static void main(String args[]) {
-	File inf=new File("A:\\jayu\\a.txt\\");
-	File outf=new File("A:\\jayu\\b.txt\\");
+/*
+LCD DATA port----PORT D
+signal port------PORT E
+    rs-------RE0
+    rw-------RE1
+    en-------RE2
+*/
+#include <p18f4550.h>
+
+//LCD data pins connected to PORTD and control pins connected to PORTE
+#define LCD_DATA    PORTD               //LCD data port
+#define ctrl        PORTE               //LCD signal port
+#define en          PORTEbits.RE2      // enable signal
+#define rw          PORTEbits.RE1      // read/write signal
+#define rs          PORTEbits.RE0     // register select signal
+#define BUSY        PORTDbits.RD7
+
+//LCD function definitions
+void LCD_Busy(void);
+void LCD_cmd(unsigned char cmd);
+void init_LCD(void);
+void LCD_write(unsigned char data);
+void LCD_write_string(static char *str);
+
+/*The following lines of code perform interrupt vector relocation to work with the USB bootloader. These must be
+used with every application program to run as a USB application.*/
+extern void _startup (void);
+#pragma code _RESET_INTERRUPT_VECTOR = 0x1000
+
+void _reset (void)
+{
+        _asm goto _startup _endasm
+}
+
+#pragma code
+#pragma code _HIGH_INTERRUPT_VECTOR = 0x1008
+void high_ISR (void)
+{
+}
+
+#pragma code
+#pragma code _LOW_INTERRUPT_VECTOR = 0x1018
+void low_ISR (void)
+{
+}
+#pragma code
+//Function to generate delay
+void myMsDelay (unsigned int time)
+{
+        unsigned int i, j;
+        for (i = 0; i < time; i++)
+                for (j = 0; j < 710; j++);/*Calibrated for a 1 ms delay in MPLAB*/
+}
+
+
+// Function to initialise the LCD
+void init_LCD(void)
+{
+    LCD_cmd(0x38);      // initialization of 16X2 LCD in 8bit mode
+    myMsDelay(15);
+
+    LCD_cmd(0x01);      // clear LCD
+    myMsDelay(15);
+
+    LCD_cmd(0x0C);      // cursor off
+    myMsDelay(15);
+
+    LCD_cmd(0x80);      // ---8 go to first line and --0 is for 0th position
+    myMsDelay(15);
+
+            // ---8 go to first line and --0 is for 0th position
+
+    return;
+}
+//Function to pass command to the LCD
+void LCD_cmd(unsigned char cmd)
+{
+    LCD_DATA = cmd;
+    rs = 0;
+    rw = 0;
+    en = 1;
+    myMsDelay(15);
+    en = 0;
+    myMsDelay(15);
+    return;
+}
+
+//Function to write data to the LCD
+void LCD_write(unsigned char data)
+{
+    LCD_DATA = data;
+    rs = 1;
+    rw = 0;
+    en = 1;
+    myMsDelay(15);
+    en = 0;
+    myMsDelay(15);
+    return ;
+}
+//Function to split the string into individual characters and call the LCD_write function
+void LCD_write_string(static char *str)   //store address value of the string in pointer *str
+{
+    int i = 0;
+    while (str[i] != 0)
+    {
+        LCD_write(str[i]);      // sending data on LCD byte by byte
+        myMsDelay(15);
+                i++;
+    }
+    return;
+}
+
+void main(void)
+{     
+     char var1[] = "WELCOME";
+  	 ADCON1 = 0x0F;        //Configuring the PORTE pins as digital I/O 
+     TRISD = 0x00;         //Configuring PORTD as output
+     TRISE = 0x00;         //Configuring PORTE as output
 	
-	FileReader ins=null;
-	FileWriter outs=null;
-	
-	try {
-		ins=new FileReader(inf);
-		outs=new FileWriter(outf);
-		
-		int ch;
-		while((ch=ins.read())!=-1) {
-			outs.write(ch);
-		}
+    
+     init_LCD();           // initialization of LCD
+     myMsDelay(50);       // delay of 50 mili seconds
+     LCD_write_string(var1);
+     while (1);
+}
+/*
+Program : To Interface LED's to Port A, B, C, D, E
+*/
+#include <p18f4550.h>
+/*The following lines of code perform interrupt vector relocation to work with the USB bootloader. These must be used with every application program to run as a USB application.*/
+extern void _startup (void);
+#pragma code _RESET_INTERRUPT_VECTOR = 0x1000
+
+void _reset (void)
+{
+	_asm goto _startup _endasm
+}
+
+#pragma code
+#pragma code _HIGH_INTERRUPT_VECTOR = 0x1008
+void high_ISR (void)
+{
+}
+
+#pragma code
+#pragma code _LOW_INTERRUPT_VECTOR = 0x1018
+void low_ISR (void)
+{
+}
+#pragma code
+/*End of interrupt vector relocation*/
+/*Start of main program*/
+void myMsDelay (unsigned int time)
+{
+	unsigned int i, j;
+	for (i = 0; i < time; i++)
+		for (j = 0; j < 710; j++);/*Calibrated for a 1 ms delay in MPLAB*/
+}
+
+void main()
+{
+	TRISA = 0x00;
+	TRISB = 0x00;
+	TRISC = 0x00;
+	TRISD = 0x00;
+	TRISE = 0x00;
+	INTCON2bits.RBPU=0; 
+	ADCON1 = 0x0F;
+	while(1)
+	{
+		LATA = 0x55;
+		LATB = 0x55;
+		LATC = 0x55;
+		LATD = 0x55;
+		LATE = 0x55;
+		myMsDelay(300);
+		LATA = 0xAA;
+		LATB = 0xAA;
+		LATC = 0xAA;
+		LATD = 0xAA;
+		LATE = 0xAA;
+		myMsDelay(300);
 	}
-		catch(IOException e) {
-			System.out.println(e);
-			System.exit(-1);
-		}
-	finally {
-		try {
-			ins.close();
-			outs.close();
-		}
-		catch(IOException e) {}
-	}
-		System.out.println("File Copied");
-	}
-} 
-/* MATRICS*/
-import java.util.Scanner;
-public class Matrics{
-	
-	public static void main(String[] args){
-		Scanner S=new Scanner(System.in);
-		int row,col;
-		System.out.println("Enter no. of rows & columns: ");
-		row=S.nextInt();
-		col=S.nextInt();
-		
-		int a[][]=new int[row][col];
-		int b[][]=new int[row][col];
-		int c[][]=new int[row][col];
-		System.out.println("Enter matrix a: ");
-		for(int i=0;i<row;i++)
-		{
-			for(int j=0;j<col;j++)
-			{
-				a[i][j]=S.nextInt();
-			}
-		}
-		System.out.println("Enter matrix b: ");
-		for(int i=0;i<row;i++)
-		{
-			for(int j=0;j<col;j++)
-			{
-				b[i][j]=S.nextInt();
-			}
-		}
-		
-		for(int i=0;i<row;i++)
-		{
-			for(int j=0;j<col;j++)
-			{
-				c[i][j]=a[i][j]+b[i][j];
-			}
-		}
-		System.out.println("Addition is:\t ");
-		for(int i=0;i<row;i++)
-		{
-			for(int j=0;j<col;j++)
-			{
-				System.out.println(c[i][j]+"\t");
-			}
-			System.out.println();
-		}
-	}
-/* playerclass*/
-import java.util.Scanner;
-public class Playerdetail {
-	public static void main(String[]args){
-		cricket ck=new cricket();
-		hockey hk=new hockey();
-		football fb=new football();
-		Scanner read=new Scanner(System.in);
-		int op1,op2;
-		while(true)
-		{
-			System.out.println("1.Enter details 2.Display 3.Exit");
-			System.out.println("Enter your option");
-			op1=read.nextInt();
-			switch(op1)
-			{
-			case 1:
-			System.out.println("1.Football player 2.Hockey player 3.cricket player");
-		    System.out.append("Enter your option");
-		    op2=read.nextInt();
-		    switch(op2)
-		    {
-		    case 1:
-		    	System.out.println("Enter name:");
-		    	fb.name=read.next();
-		    	System.out.println("Enter skill:");
-		    	fb.skill=read.next();
-		    	System.out.println("Enter age:");
-		    	fb.age=read.nextInt();
-		    	break;
-		    case 2:
-		    	System.out.println("Enter name:");
-		    	hk.name=read.next();
-		    	System.out.println("Enter skill:");
-		        hk.skill=read.next();
-		    	System.out.println("Enter age:");
-		    	hk.age=read.nextInt();
-		    	break;
-		    case 3:
-		    	System.out.println("Enter name:");
-		    	ck.name=read.next();
-		    	System.out.println("Enter skill:");
-		    	ck.skill=read.next();
-		    	System.out.println("Enter age:");
-		    	ck.age=read.nextInt();
-		    	break;
-		    		    	
-		    	}
-		    break;
-			case 2:
-				System.out.println("1.Football player 2.Hockey plyer 3.Cricket plyer");
-				System.out.append("Enter your option");
-				op2=read.nextInt();
-				switch(op2)
-				{
-				case 1:
-					System.out.println("Name"+fb.name);
-					System.out.println("skill"+fb.skill);
-					System.out.println("Age"+fb.age);
-					break;
-				case 2:
-					System.out.println("Name"+hk.name);
-					System.out.println("Skill"+hk.skill);
-					System.out.println("Age"+hk.age);
-					break;
-				case 3:
-					System.out.println("Name"+ck.name);
-					System.out.println("Skill"+ck.skill);
-					System.out.println("Age"+ck.age);
-					break;
-					}
-		    break;
-			case 3:
-				System.exit(0);
+}
+
 				
-			}
-		}
-	}
+/** I N C L U D E S ********/
+
+#include<p18f4550.h>
+
+
+
+
+/** P R I V A T E  P R O T O T Y P E S ***************************************/
+
+void myMsDelay (unsigned int time);
+
+/** V E C T O R  R E M A P P I N G *******************************************/
+
+
+extern void _startup (void);  // See c018i.c 
+#pragma code _RESET_INTERRUPT_VECTOR = 0x1000
+void _reset (void)
+{
+    _asm goto _startup _endasm
+}
+#pragma code
+
+#pragma code _HIGH_INTERRUPT_VECTOR = 0x1008
+void _high_ISR (void)
+{
+    //_asm goto High_ISR _endasm
+}
+
+#pragma code _LOW_INTERRUPT_VECTOR = 0x1018
+void _low_ISR (void)
+{
+   // _asm goto Low_ISR _endasm
+}
+
+#pragma code
+
+/** D E C L A R A T I O N S **************************************************/
+
+#pragma code
+
+void main()
+{ 
+	TRISCbits.TRISC2 = 0 ;              // Set PORTC, 2 as output
+    TRISCbits.TRISC6 = 0 ;
+	TRISCbits.TRISC7 = 0 ;
+	PR2 = 0x4A;                         // set PWM period to Maximum value 
+    CCPR1L = 0x12;                      // Initalise PWM duty cycle to 00 
+    CCP1CON = 0x3C;                     // Configure CCP1CON as explained above.
+ 	T2CON = 0x07;
+	PORTCbits.RC6 = 1;
+    PORTCbits.RC7 = 0;
+  while(1)
+	{
+		PR2 = 0x00;
+		myMsDelay(1000);
+		PR2 = 0x3F;
+		myMsDelay(1000);
+		PR2 = 0xBF;
+		myMsDelay(1000);
+		PR2 = 0xFF;
+		myMsDelay(1000);
+ 	}   
+ 
+}
+
+
+void myMsDelay (unsigned int time)
+{
+	unsigned int i, j;
+	for (i = 0; i < time; i++)
+		for (j = 0; j < 710; j++);/*Calibrated for a 1 ms delay in MPLAB*/
+}
+/********************************************************************/
+//This program demonstrates the use of timer   		   //								                                                     */
+/******************************************************************/
+
+
+#include <p18f4550.h>
+#include <stdlib.h>
+
+
+/*The following lines of code perform interrupt vector relocation to work with the USB bootloader. These must be
+used with every application program to run as a USB application.*/
+void timer_isr(void);
+
+extern void _startup (void);
+#pragma code _RESET_INTERRUPT_VECTOR = 0x1000
+void _reset (void)
+{
+	_asm goto _startup _endasm
 
 }
-class players
+#pragma code
+//The program execution comes to this point when a timer interrupt is generated
+#pragma code _HIGH_INTERRUPT_VECTOR = 0x1008
+void high_ISR (void)
 {
-	String name;
-	int age;
-	String skill;
+	
+	_asm goto timer_isr _endasm    //The program is relocated to execute the interrupt routine timer_iser
+
+}
+//
+#pragma code
+//
+#pragma code _LOW_INTERRUPT_VECTOR = 0x1018
+ void low_ISR (void)
+{
+
+}
+#pragma code
+// This function is executed as soon as the timer interrupt is generated due to timer overflow
+#pragma interrupt timer_isr
+void timer_isr(void)
+{
+	TMR0H = 0XFF;                         // Reloading the timer values after overflow
+	TMR0L = 0X00;
+	PORTB = ~PORTB;                         //Toggle the PORTB led outputs RB0 - RB3
+ 	INTCONbits.TMR0IF = 0;	             //Resetting the timer overflow interrupt flag
+
+}
+
+
+
+
+
+void main()
+{	
+	ADCON1 = 0x0F;        //Configuring the PORTE pins as digital I/O 
+	
+	TRISB = 0;                  //Configruing the LED port pins as outputs
+	PORTB = 0xFF;                //Setting the initial value of the LED's after reset	
+	T0CON = 0x00;				//Set the timer to 16-bit mode,internal instruction cycle clock,1:256 prescaler
+  	TMR0H = 0xFF;                // Reset Timer0 to 0x48E5 TO MAKE DELAY OF 1 SECOND
+  	TMR0L = 0x00;
+   	INTCONbits.TMR0IF = 0;      // Clear Timer0 overflow flag
+	INTCONbits.TMR0IE = 1;		// TMR0 interrupt enabled
+ 	T0CONbits.TMR0ON = 1;		// Start timer0
+	INTCONbits.GIE = 1;			// Global interrupt enabled
+
+	while(1);                      //Program execution stays here untill the timer overflow interrupt is generated
 	
 }
-class football extends players
+/********************************************************************/
+//This program demonstrates the use of timer   		   //								                                                     */
+/******************************************************************/
+
+
+#include <p18f4550.h>
+#include <stdlib.h>
+
+
+/*The following lines of code perform interrupt vector relocation to work with the USB bootloader. These must be
+used with every application program to run as a USB application.*/
+void timer_isr(void);
+
+extern void _startup (void);
+#pragma code _RESET_INTERRUPT_VECTOR = 0x1000
+void _reset (void)
 {
+	_asm goto _startup _endasm
+
 }
-class cricket extends players
+#pragma code
+//The program execution comes to this point when a timer interrupt is generated
+#pragma code _HIGH_INTERRUPT_VECTOR = 0x1008
+void high_ISR (void)
 {
-}
-class hockey extends players
-{
-}
-/* to sort list of integer*/
-import java.util.Arrays;
-import java.util.Scanner;
-public class SortInt {
-	public static void main (String[] args)
-	{
-		Scanner read=new Scanner(System.in);
-		int count,b,temp,c;
-		int a[]=new int[10];
-		 System.out.println("How many Integers  You want to enter ?");
-		 count=read.nextInt();
-		 for(b=0;b<count;b++)
-		 {
-			 System.out.println("Enter values");
-			 temp=read.nextInt();
-			 a[b]=temp;
-		 }
-		 System.out.println("The array before sorting:");
-		 for(b=0;b<count;b++){
-			 System.out.println(a[b]+" ");
-		 }
-		 System.out.println("The araay after sort:");
-		 for(b=0;b<count;b++)
-		 {
-			 for(c=0;c<count-b-1;c++)
-			 {
-				 if(a[c]>a[c+1]){
-					 temp=a[c];
-					 a[c]=a[c+1];
-					 a[c+1]=temp;
-				 }
-		 }
-	}
-	for(b=0;b<count;b++)
-	{
-		System.out.println(a[b]+" ");
-	}
 	
-			 }
-		 
-	}
-/* to sort list of names*/
-import java.util.Scanner;
-public class SortName {
-	public static void main (String[] args) 
-	{
-		int i,j,n;
-		Scanner ip=new Scanner(System.in);
-		System.out.println("How many string You want to Enter?");
-		n=ip.nextInt();
-		String name[]=new String[n+1];
-		System.out.println("Enter sting:");
-		for(i=0;i<n;i++)
-			name[i]=ip.next();
-		for(i=0;i<n;i++)
-		{
-			for(j=i+1;j<n;j++)
-			{
-				if(name [i].trim().compareTo(name[j].trim())>0)
-				{
-					String temp=name[i];
-					name[i]=name[j];
-					name[j]=temp;
-				}
-			}
-		}
-		System.out.println("Sorted list is: ");
-		for(i=0;i<n;i++)
-			System.out.println(" "+name[i]);
-	}
+	_asm goto timer_isr _endasm    //The program is relocated to execute the interrupt routine timer_iser
+
 }
-/* method overloading*/
-package SapJava;
+//
+#pragma code
+//
+#pragma code _LOW_INTERRUPT_VECTOR = 0x1018
+ void low_ISR (void)
+{
 
-public class MethodOverload {
-
-    // Method to add two integers
-    void sum(int a, int b) {
-        System.out.println("Sum is " + (a + b));
-    }
-
-    // Method to add three integers
-    void sum(int a, int b, int c) {
-        System.out.println("Sum is " + (a + b + c));
-    }
-
-    // Method to add two double numbers
-    void sum(double a, double b) {
-        System.out.println("Sum is " + (a + b));
-    }
-
-    public static void main(String[] args) {
-        MethodOverload cal = new MethodOverload();
-        System.out.println("Method Overloading");
-
-        cal.sum(8, 5);        // Calls sum(int a, int b)
-        cal.sum(5, 5, 5);     // Calls sum(int a, int b, int c)
-        cal.sum(4.6, 3.8);    // Calls sum(double a, double b)
-    }
 }
-/* constructor overloading*/
-package SapJava;
+#pragma code
+// This function is executed as soon as the timer interrupt is generated due to timer overflow
+#pragma interrupt timer_isr
+void timer_isr(void)
+{
+	TMR0H = 0XFF;                         // Reloading the timer values after overflow
+	TMR0L = 0X00;
+	PORTB = ~PORTB;                         //Toggle the PORTB led outputs RB0 - RB3
+ 	INTCONbits.TMR0IF = 0;	             //Resetting the timer overflow interrupt flag
 
-public class Student {
-    int id;        // Instance variable
-    String name;   // Instance variable
-
-    // Default constructor
-    Student() {
-        System.out.println("This is a default constructor");
-    }
-
-    // Parameterized constructor
-    Student(int i, String n) {
-        id = i;
-        name = n;
-    }
-
-    public static void main(String[] args) {
-        // Using default constructor
-        Student s = new Student();
-        System.out.println("\nDefault Constructor values:\n");
-        System.out.println("Student Id: " + s.id + "\nStudent Name: " + s.name);
-
-        // Using parameterized constructor
-        Student student = new Student(10, "Parth");
-        System.out.println("\nParameterized Constructor values:\n");
-        System.out.println("Student Id: " + student.id + "\nStudent Name: " + student.name);
-    }
-}
-/*matching and non matching rectangle*/
-package FJP;
-import java.util.Scanner;
-
-public class Rectangle {
-    double length, width, area;
-    String colour;
-    Scanner scanner = new Scanner(System.in);
-
-    // Method to get length
-    void get_length() {
-        System.out.println("Enter the Length of Rectangle: ");
-        length = scanner.nextDouble();
-    }
-
-    // Method to get width
-    void get_width() {
-        System.out.println("Enter the Width of Rectangle: ");
-        width = scanner.nextDouble();
-    }
-
-    // Method to get colour
-    void get_Colour() {
-        System.out.println("Enter the Colour of Rectangle: ");
-        colour = scanner.next();
-    }
-
-    // Method to calculate area
-    double find_area() {
-        area = length * width;
-        return area;
-    }
-
-    public static void main(String[] args) {
-        Rectangle rectangle1 = new Rectangle();
-        Rectangle rectangle2 = new Rectangle();
-
-        System.out.println("THIS IS FOR RECTANGLE 1\n");
-        rectangle1.get_length();
-        rectangle
-/* calculator*/
-import java.util.Scanner;
-
-public class Calculator {
-    public static void main(String[] args) {
-        Scanner in = new Scanner(System.in);
-        int choice;
-        int no1, no2, result;
-
-        do {
-            System.out.println("\n--- Simple Calculator ---");
-            System.out.println("1. Add");
-            System.out.println("2. Subtract");
-            System.out.println("3. Multiply");
-            System.out.println("4. Divide");
-            System.out.println("5. Factorial");
-            System.out.println("6. Exit");
-
-            System.out.print("Enter your choice: ");
-            choice = in.nextInt();
-
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter First Number: ");
-                    no1 = in.nextInt();
-                    System.out.print("Enter Second Number: ");
-                    no2 = in.nextInt();
-                    result = no1 + no2;
-                    System.out.println("Addition: " + result);
-                    break;
-
-                case 2:
-                    System.out.print("Enter First Number: ");
-                    no1 = in.nextInt();
-                    System.out.print("Enter Second Number: ");
-                    no2 = in.nextInt();
-                    result = no1 - no2;
-                    System.out.println("Subtraction: " + result);
-                    break;
-
-                case 3:
-                    System.out.print("Enter First Number: ");
-                    no1 = in.nextInt();
-                    System.out.print("Enter Second Number: ");
-                    no2 = in.nextInt();
-                    result = no1 * no2;
-                    System.out.println("Multiplication: " + result);
-                    break;
-
-                case 4:
-                    System.out.print("Enter First Number: ");
-                    no1 = in.nextInt();
-                    System.out.print("Enter Second Number: ");
-                    no2 = in.nextInt();
-                    if (no2 != 0) {
-                        result = no1 / no2;
-                        System.out.println("Division: " + result);
-                    } else {
-                        System.out.println("Error: Cannot divide by zero!");
-                    }
-                    break;
-
-                case 5:
-                    System.out.print("Enter Number: ");
-                    no1 = in.nextInt();
-                    result = 1;
-                    for (int i = 1; i <= no1; ++i) {
-                        result *= i;
-                    }
-                    System.out.println("Factorial of " + no1 + " is " + result);
-                    break;
-
-                case 6:
-                    System.out.println("Terminating program...");
-                    break;
-
-                default:
-                    System.out.println("Invalid Choice! Please try again.");
-                    break;
-            }
-
-        } while (choice != 6);
-
-        in.close();
-    }
-}
-/* display first 50 number; factorial*/
-import java.util.Scanner;
-
-class Exp1 {
-    public static void main(String args[]) {
-        Scanner sc = new Scanner(System.in);
-        int ch, i, num, n, sum, cnt, flag, fact;
-
-        do {
-            System.out.println("\n1 : Find Factorial");
-            System.out.println("2 : Display First 50 Prime Numbers");
-            System.out.println("3 : Find Sum and Average of N Numbers");
-            System.out.println("4 : Exit");
-            System.out.print("Enter Choice = ");
-            ch = sc.nextInt();
-
-            switch (ch) {
-                case 1:
-                    System.out.print("Enter number = ");
-                    n = sc.nextInt();
-                    fact = 1;
-                    for (i = 1; i <= n; i++)
-                        fact = fact * i;
-                    System.out.println("Factorial = " + fact);
-                    break;
-
-                case 2:
-                    cnt = 1;
-                    n = 1;
-                    System.out.println("First 50 Prime Numbers:");
-                    while (cnt <= 50) {
-                        flag = 1;
-                        for (i = 2; i <= n / 2; i++) {
-                            if (n % i == 0) {
-                                flag = 0;
-                                break;
-                            }
-                        }
-                        if (flag == 1 && n > 1) {
-                            System.out.print(n + " ");
-                            cnt++;
-                        }
-                        n++;
-                    }
-                    System.out.println();
-                    break;
-
-                case 3:
-                    System.out.print("Enter limit = ");
-                    n = sc.nextInt();
-                    sum = 0;
-                    for (i = 1; i <= n; i++) {
-                        System.out.print("Enter number  = ");
-                        num = sc.nextInt();
-                        sum = sum + num;
-                    }
-                    System.out.println("Sum = " + sum);
-                    System.out.println("Average = " + (float) sum / n);
-                    break;
-
-                case 4:
-                    System.out.println("Exiting program...");
-                    break;
-
-                default:
-                    System.out.println("Invalid choice!");
-            }
-        } while (ch != 4);
-
-        sc.close();
-    }
 }
 
 
 
+
+
+void main()
+{	
+	ADCON1 = 0x0F;        //Configuring the PORTE pins as digital I/O 
+	
+	TRISB = 0;                  //Configruing the LED port pins as outputs
+	PORTB = 0xFF;                //Setting the initial value of the LED's after reset	
+	T0CON = 0x00;				//Set the timer to 16-bit mode,internal instruction cycle clock,1:256 prescaler
+  	TMR0H = 0xFF;                // Reset Timer0 to 0x48E5 TO MAKE DELAY OF 1 SECOND
+  	TMR0L = 0x00;
+   	INTCONbits.TMR0IF = 0;      // Clear Timer0 overflow flag
+	INTCONbits.TMR0IE = 1;		// TMR0 interrupt enabled
+ 	T0CONbits.TMR0ON = 1;		// Start timer0
+	INTCONbits.GIE = 1;			// Global interrupt enabled
+
+	while(1);                      //Program execution stays here untill the timer overflow interrupt is generated
+	
+}
